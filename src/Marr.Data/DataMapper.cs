@@ -864,25 +864,33 @@ namespace Marr.Data
         {
             if (MapRepository.Instance.EnableTraceLogging)
             {
+                if (!Command.CommandText.StartsWith("SELECT")) return;
+
                 var sb = new StringBuilder();
-                sb.AppendLine();
-                sb.AppendLine("==== Begin Query Trace ====");
-                sb.AppendLine();
-                sb.AppendLine("QUERY TYPE:");
-                sb.AppendLine(Command.CommandType.ToString());
-                sb.AppendLine();
-                sb.AppendLine("QUERY TEXT:");
-                sb.AppendLine(Command.CommandText);
-                sb.AppendLine();
-                sb.AppendLine("PARAMETERS:");
-                foreach (IDbDataParameter p in Parameters)
+//                sb.AppendLine();
+//                sb.AppendLine("==== Begin Query Trace ====");
+//                sb.AppendLine();
+//                sb.AppendLine("QUERY TYPE:");
+//                sb.AppendLine(Command.CommandType.ToString());
+//                sb.AppendLine();
+//                sb.AppendLine("QUERY TEXT:");
+                sb.Append(Command.CommandText);
+
+                if (Parameters.Count > 0)
                 {
-                    object val = (p.Value != null && p.Value is string) ? string.Format("\"{0}\"", p.Value) : p.Value;
-                    sb.AppendFormat("{0} = [{1}]", p.ParameterName, val ?? "NULL").AppendLine();
+                    sb.AppendLine();
+//                    sb.AppendLine("PARAMETERS:");
+                    foreach (IDbDataParameter p in Parameters)
+                    {
+                        object val = (p.Value != null && p.Value is string)
+                            ? string.Format("\"{0}\"", p.Value)
+                            : p.Value;
+                        sb.AppendFormat("{0} = [{1}]", p.ParameterName, val ?? "NULL").AppendLine();
+                    }
                 }
-                sb.AppendLine();
-                sb.AppendLine("==== End Query Trace ====");
-                sb.AppendLine();
+//                sb.AppendLine();
+//                sb.AppendLine("==== End Query Trace ====");
+//                sb.AppendLine();
 
                 Trace.Write(sb.ToString());
             }
