@@ -827,15 +827,13 @@ namespace Marr.Data
 
         protected virtual void OnOpeningConnection()
         {
-            WriteToTraceLog();
-
             if (OpeningConnection != null)
                 OpeningConnection(this, EventArgs.Empty);
         }
 
         protected virtual void OnClosingConnection()
         {
-//            WriteToTraceLog();
+            WriteToTraceLog();
 
             if (ClosingConnection != null)
                 ClosingConnection(this, EventArgs.Empty);
