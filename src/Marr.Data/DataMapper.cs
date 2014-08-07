@@ -827,13 +827,15 @@ namespace Marr.Data
 
         protected virtual void OnOpeningConnection()
         {
+            WriteToTraceLog();
+
             if (OpeningConnection != null)
                 OpeningConnection(this, EventArgs.Empty);
         }
 
         protected virtual void OnClosingConnection()
         {
-            WriteToTraceLog();
+//            WriteToTraceLog();
 
             if (ClosingConnection != null)
                 ClosingConnection(this, EventArgs.Empty);
@@ -864,7 +866,7 @@ namespace Marr.Data
         {
             if (MapRepository.Instance.EnableTraceLogging)
             {
-                if (!Command.CommandText.StartsWith("SELECT")) return;
+                if (!Command.CommandText.StartsWith("SELECT", StringComparison.InvariantCultureIgnoreCase)) return;
 
                 var sb = new StringBuilder();
 //                sb.AppendLine();
