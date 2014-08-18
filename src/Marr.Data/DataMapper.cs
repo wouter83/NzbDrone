@@ -827,13 +827,15 @@ namespace Marr.Data
 
         protected virtual void OnOpeningConnection()
         {
+            WriteToTraceLog();
+
             if (OpeningConnection != null)
                 OpeningConnection(this, EventArgs.Empty);
         }
 
         protected virtual void OnClosingConnection()
         {
-            WriteToTraceLog();
+            //WriteToTraceLog();
 
             if (ClosingConnection != null)
                 ClosingConnection(this, EventArgs.Empty);
@@ -864,6 +866,16 @@ namespace Marr.Data
         {
             if (MapRepository.Instance.EnableTraceLogging)
             {
+                if (Command == null || Command.CommandText == null)
+                {
+                    return;
+                }
+
+                if (Command.CommandText.Contains("--10485760"))
+                {
+                    throw new Exception("CommandText contains --10485760");
+                }
+
                 if (!Command.CommandText.StartsWith("SELECT", StringComparison.InvariantCultureIgnoreCase) || Command.CommandText.Contains("FROM [Logs]")) return;
 
                 var sb = new StringBuilder();
