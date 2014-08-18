@@ -864,7 +864,7 @@ namespace Marr.Data
         {
             if (MapRepository.Instance.EnableTraceLogging)
             {
-                if (!Command.CommandText.StartsWith("SELECT", StringComparison.InvariantCultureIgnoreCase)) return;
+                if (!Command.CommandText.StartsWith("SELECT", StringComparison.InvariantCultureIgnoreCase) || Command.CommandText.Contains("FROM [Logs]")) return;
 
                 var sb = new StringBuilder();
 //                sb.AppendLine();
