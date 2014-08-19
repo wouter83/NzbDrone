@@ -24,6 +24,7 @@ namespace NzbDrone.Core.Download.Clients.Transmission
     public class TransmissionProxy: ITransmissionProxy
     {        
         private readonly Logger _logger;
+        private String _sessionId;
 
         public TransmissionProxy(Logger logger)
         {
@@ -139,29 +140,48 @@ namespace NzbDrone.Core.Download.Clients.Transmission
                 sessionIdRequest.Credentials = new NetworkCredential(settings.Username, settings.Password);
             }
 
-            var sessionIdResponse = client.Execute(sessionIdRequest);
-
-            sessionIdResponse.ValidateResponse(client);
-
-            var sessionId = sessionIdResponse.Headers.SingleOrDefault(o => o.Name == "X-Transmission-Session-Id");
-
-            if (sessionId == null)
+            try
             {
-                throw new DownloadClientAuthenticationException("Getting Transmission session id failed. Wrong username or password?");
+                var sessionIdResponse = client.ExecuteAndValidate(sessionIdRequest); 
+            }
+            catch (RestException ex)
+            {
+                if (ex.Response.StatusCode == HttpStatusCode.Conflict)
+                {
+                    var sessionId = ex.Response.Headers.SingleOrDefault(o => o.Name == "X-Transmission-Session-Id");
+
+                    if (sessionId == null)
+                    {
+                        throw new DownloadClientException("Remote host did not return a Session Id.");
+                    }
+
+                    return (String)sessionId.Value;
+                }
+                else if (ex.Response.StatusCode == HttpStatusCode.Unauthorized)
+                {
+                    throw new DownloadClientAuthenticationException("User authentication failed.");
+                }
+                else
+                {
+                    throw;
+                }
             }
 
-            return (String)sessionId.Value;
+            throw new DownloadClientException("Remote host did not return a Session Id.");
         }
-
+        
         public TransmissionResponse ProcessRequest(String action, Object arguments, TransmissionSettings settings)
         {
             var client = BuildClient(settings);
 
-            var sessionId = GetSessionId(client, settings);
+            if (String.IsNullOrWhiteSpace(_sessionId))
+            {
+                _sessionId = GetSessionId(client, settings);
+            }
 
             var request = new RestRequest(Method.POST);
             request.RequestFormat = DataFormat.Json;
-            request.AddHeader("X-Transmission-Session-Id", sessionId);
+            request.AddHeader("X-Transmission-Session-Id", _sessionId);
 
             if (!settings.Username.IsNullOrWhiteSpace())
             {
@@ -178,9 +198,32 @@ namespace NzbDrone.Core.Download.Clients.Transmission
 
             request.AddBody(data);
 
-            var transmissionResponse = client.ExecuteAndValidate<TransmissionResponse>(request);
+            TransmissionResponse transmissionResponse = null;
 
-            if (transmissionResponse.Result != "success")
+            try
+            {
+                transmissionResponse = client.ExecuteAndValidate<TransmissionResponse>(request);                
+            }
+            catch (RestException ex)
+            {
+                if (ex.Response.StatusCode == HttpStatusCode.Conflict)
+                {
+                    _sessionId = GetSessionId(client, settings);
+                    request.Parameters.Remove(request.Parameters.Where(o => o.Name == "X-Transmission-Session-Id").Single());
+                    request.AddHeader("X-Transmission-Session-Id", _sessionId);
+                    transmissionResponse = client.ExecuteAndValidate<TransmissionResponse>(request); 
+                }
+                else if (ex.Response.StatusCode == HttpStatusCode.Unauthorized)
+                {
+                    throw new DownloadClientAuthenticationException("User authentication failed.");
+                }
+                else
+                {
+                    throw;
+                }
+            }
+
+            if (transmissionResponse == null || transmissionResponse.Result != "success")
             {
                 throw new TransmissionException(transmissionResponse.Result);
             }
