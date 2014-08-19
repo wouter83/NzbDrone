@@ -25,7 +25,15 @@ namespace NzbDrone.Common.Test.InstrumentationTests
         [TestCase(@"""servers"":[{""username"":""mySecret"",""password"":""mySecret""}]")]
         [TestCase(@"""misc"":{""email_account"":""mySecret"",""email_to"":[],""email_from"":"""",""email_pwd"":""mySecret""}")]
         // uTorrent
-        [TestCase(@"http://localhost:9091/gui/?token=wThmph5l0ZXfHa6WOA4lqiLvyjCP0FpMrMeXmySecret_VXBO11HoKL751MAAAAA&list=1")]
+        [TestCase(@"http://localhost:9091/gui/?token=wThmph5l0ZXfH-a6WOA4lqiLvyjCP0FpMrMeXmySecret_VXBO11HoKL751MAAAAA&list=1")]
+        [TestCase(@",[""boss_key"",0,""mySecret"",{""access"":""Y""}],[""boss_key_salt"",0,""mySecret"",{""access"":""W""}]")]
+        [TestCase(@",[""webui.username"",2,""mySecret"",{""access"":""Y""}],[""webui.password"",2,""mySecret"",{""access"":""Y""}]")]
+        [TestCase(@",[""webui.uconnect_username"",2,""mySecret"",{""access"":""Y""}],[""webui.uconnect_password"",2,""mySecret"",{""access"":""Y""}]")]
+        [TestCase(@",[""proxy.proxy"",2,""mySecret"",{""access"":""Y""}]")]
+        [TestCase(@",[""proxy.username"",2,""mySecret"",{""access"":""Y""}],[""proxy.password"",2,""mySecret"",{""access"":""Y""}]")]
+        // Deluge
+        [TestCase(@",{""download_location"": ""C:\Users\\mySecret mySecret\\Downloads""}")]
+        [TestCase(@",{""download_location"": ""/home/mySecret/Downloads""}")]
         public void should_clean_message(String message)
         {
             var cleansedMessage = CleanseLogMessage.Cleanse(message);
