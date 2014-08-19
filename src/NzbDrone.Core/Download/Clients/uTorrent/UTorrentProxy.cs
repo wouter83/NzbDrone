@@ -85,38 +85,24 @@ namespace NzbDrone.Core.Download.Clients.UTorrent
         {
             var arguments = new Dictionary<String, Object>();
             arguments.Add("action", "add-file");
-            arguments.Add("download-dir", 0);
             arguments.Add("path", String.Empty);
 
             var client = BuildClient(settings);
 
-            // µTorrent requires a token and cookie for authentication. The cookie is set automatically when getting the token.
-            if (_authToken.IsNullOrWhiteSpace())
-            {
-                // µTorrent requires a token and cookie for authentication. The cookie is set automatically when getting the token.
-                _authToken = GetAuthToken(client);
-            }
-
-            var request = new RestRequest(Method.POST); // add-file should use POST unlike all other methods which are GET
+            // add-file should use POST unlike all other methods which are GET
+            var request = new RestRequest(Method.POST);
             request.RequestFormat = DataFormat.Json;
-            request.Resource = String.Format("gui/?token={0}&action={1}", _authToken, "add-file"); // Even though the file should be 'POSTed', the regular parameters are still expected in GET format
+            request.Resource = "/gui/";
+            request.AddParameter("token", _authToken, ParameterType.QueryString);
 
+            foreach (var argument in arguments)
+            {
+                request.AddParameter(argument.Key, argument.Value, ParameterType.QueryString);
+            }
+            
             request.AddFile("torrent_file", fileContent, fileName, @"application/octet-stream");
 
-            var clientResponse = client.Execute(request);
-
-            if (clientResponse.StatusCode == HttpStatusCode.BadRequest)
-            {
-                // Token has expired. If the settings were incorrect or the API is disabled we'd have gotten an error 400 during GetAuthToken
-                _logger.Debug("uTorrent authentication error.");
-
-                _authToken = GetAuthToken(client);
-                request.Resource = String.Format("gui/?token={0}&action={1}", _authToken, "add-file");
-
-                clientResponse = client.Execute(request);
-            }
-
-            var uTorrentResult = Json.Deserialize<UTorrentResponse>(clientResponse.Content);
+            ProcessRequest(request, client);
         }
 
         public void RemoveTorrent(String hash, Boolean removeData, UTorrentSettings settings)
@@ -152,22 +138,22 @@ namespace NzbDrone.Core.Download.Clients.UTorrent
         {
             var client = BuildClient(settings);
 
-            if (_authToken.IsNullOrWhiteSpace())
-            {
-                // µTorrent requires a token and cookie for authentication. The cookie is set automatically when getting the token.
-                _authToken = GetAuthToken(client);
-            }
-
             var request = new RestRequest(Method.GET);
             request.RequestFormat = DataFormat.Json;
             request.Resource = "/gui/";
-            request.AddParameter("token", _authToken);
+            request.AddParameter("token", _authToken, ParameterType.QueryString);
 
             foreach (var argument in arguments)
             {
-                request.AddParameter(argument.Key, argument.Value);
+                request.AddParameter(argument.Key, argument.Value, ParameterType.QueryString);
             }
 
+            return ProcessRequest(request, client);
+        }
+
+        private UTorrentResponse ProcessRequest(IRestRequest request, IRestClient client)
+        {
+            _logger.Debug("Url: {0}", client.BuildUri(request));
             var clientResponse = client.Execute(request);
 
             if (clientResponse.StatusCode == HttpStatusCode.BadRequest)
@@ -195,6 +181,8 @@ namespace NzbDrone.Core.Download.Clients.UTorrent
             var request = new RestRequest();
             request.RequestFormat = DataFormat.Json;
             request.Resource = "/gui/token.html";
+
+            _logger.Debug("Url: {0}", client.BuildUri(request));
             var response = client.Execute(request);
 
             if (response.StatusCode == HttpStatusCode.Unauthorized)
@@ -224,6 +212,12 @@ namespace NzbDrone.Core.Download.Clients.UTorrent
 
             restClient.Authenticator = new HttpBasicAuthenticator(settings.Username, settings.Password);
             restClient.CookieContainer = _cookieContainer;
+
+            if (_authToken.IsNullOrWhiteSpace())
+            {
+                // µTorrent requires a token and cookie for authentication. The cookie is set automatically when getting the token.
+                _authToken = GetAuthToken(restClient);
+            }
 
             return restClient;
         }

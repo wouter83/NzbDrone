@@ -171,6 +171,7 @@ namespace NzbDrone.Core.Download.Clients.Deluge
 
             request.AddBody(data);
 
+            _logger.Debug("Url: {0} Action: {1}", client.BuildUri(request), action);
             var response = client.ExecuteAndValidate<DelugeResponse<TResult>>(request);
 
             return response;

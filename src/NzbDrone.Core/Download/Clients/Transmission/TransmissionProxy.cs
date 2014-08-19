@@ -132,40 +132,35 @@ namespace NzbDrone.Core.Download.Clients.Transmission
 
         protected String GetSessionId(IRestClient client, TransmissionSettings settings)
         {
-            var sessionIdRequest = new RestRequest();
-            sessionIdRequest.RequestFormat = DataFormat.Json;
+            var request = new RestRequest();
+            request.RequestFormat = DataFormat.Json;
             
             if (!settings.Username.IsNullOrWhiteSpace())
             {
-                sessionIdRequest.Credentials = new NetworkCredential(settings.Username, settings.Password);
+                request.Credentials = new NetworkCredential(settings.Username, settings.Password);
             }
 
-            try
+            _logger.Debug("Url: {0} GetSessionId", client.BuildUri(request));
+            var restResponse = client.Execute(request);
+
+            // We expect the StatusCode = Conflict, coz that will provide us with a new session id.
+            if (restResponse.StatusCode == HttpStatusCode.Conflict)
             {
-                var sessionIdResponse = client.ExecuteAndValidate(sessionIdRequest); 
+                var sessionId = restResponse.Headers.SingleOrDefault(o => o.Name == "X-Transmission-Session-Id");
+
+                if (sessionId == null)
+                {
+                    throw new DownloadClientException("Remote host did not return a Session Id.");
+                }
+
+                return (String)sessionId.Value;
             }
-            catch (RestException ex)
+            else if (restResponse.StatusCode == HttpStatusCode.Unauthorized)
             {
-                if (ex.Response.StatusCode == HttpStatusCode.Conflict)
-                {
-                    var sessionId = ex.Response.Headers.SingleOrDefault(o => o.Name == "X-Transmission-Session-Id");
-
-                    if (sessionId == null)
-                    {
-                        throw new DownloadClientException("Remote host did not return a Session Id.");
-                    }
-
-                    return (String)sessionId.Value;
-                }
-                else if (ex.Response.StatusCode == HttpStatusCode.Unauthorized)
-                {
-                    throw new DownloadClientAuthenticationException("User authentication failed.");
-                }
-                else
-                {
-                    throw;
-                }
+                throw new DownloadClientAuthenticationException("User authentication failed.");
             }
+
+            restResponse.ValidateResponse(client);
 
             throw new DownloadClientException("Remote host did not return a Session Id.");
         }
@@ -198,32 +193,28 @@ namespace NzbDrone.Core.Download.Clients.Transmission
 
             request.AddBody(data);
 
-            TransmissionResponse transmissionResponse = null;
+            _logger.Debug("Url: {0} Action: {1}", client.BuildUri(request), action);
+            var restResponse = client.Execute(request);
 
-            try
+            if (restResponse.StatusCode == HttpStatusCode.Conflict)
             {
-                transmissionResponse = client.ExecuteAndValidate<TransmissionResponse>(request);                
+                _sessionId = GetSessionId(client, settings);
+                request.Parameters.Remove(request.Parameters.Where(o => o.Name == "X-Transmission-Session-Id").Single());
+                request.AddHeader("X-Transmission-Session-Id", _sessionId);
+                restResponse = client.Execute(request);
             }
-            catch (RestException ex)
+            else if (restResponse.StatusCode == HttpStatusCode.Unauthorized)
             {
-                if (ex.Response.StatusCode == HttpStatusCode.Conflict)
-                {
-                    _sessionId = GetSessionId(client, settings);
-                    request.Parameters.Remove(request.Parameters.Where(o => o.Name == "X-Transmission-Session-Id").Single());
-                    request.AddHeader("X-Transmission-Session-Id", _sessionId);
-                    transmissionResponse = client.ExecuteAndValidate<TransmissionResponse>(request); 
-                }
-                else if (ex.Response.StatusCode == HttpStatusCode.Unauthorized)
-                {
-                    throw new DownloadClientAuthenticationException("User authentication failed.");
-                }
-                else
-                {
-                    throw;
-                }
+                throw new DownloadClientAuthenticationException("User authentication failed.");
             }
 
-            if (transmissionResponse == null || transmissionResponse.Result != "success")
+            var transmissionResponse = restResponse.Read<TransmissionResponse>(client);
+
+            if (transmissionResponse == null)
+            {
+                throw new TransmissionException("Unexpected response");
+            }
+            else if (transmissionResponse.Result != "success")
             {
                 throw new TransmissionException(transmissionResponse.Result);
             }
