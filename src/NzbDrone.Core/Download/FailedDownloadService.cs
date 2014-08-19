@@ -97,7 +97,8 @@ namespace NzbDrone.Core.Download
                 }
 
                 //TODO: Make this more configurable (ignore failure reasons) to support changes and other failures that should be ignored
-                if (trackedDownload.DownloadItem.Message.Equals("Unpacking failed, write error or disk is full?",
+                if (!trackedDownload.DownloadItem.Message.IsNullOrWhiteSpace() &&
+                    trackedDownload.DownloadItem.Message.Equals("Unpacking failed, write error or disk is full?",
                     StringComparison.InvariantCultureIgnoreCase))
                 {
                     UpdateStatusMessage(trackedDownload, LogLevel.Error, "Download failed due to lack of disk space, not blacklisting.");
