@@ -54,6 +54,7 @@ namespace NzbDrone.Core.Indexers.KickassTorrents
             foreach (var seriesTitle in titles)
             {
                 yield return CreateSearchUrl(String.Format("{0} category:tv season:{1} episode:{2}", seriesTitle.Replace('+', ' '), seasonNumber, episodeNumber), 0);
+                yield return CreateSearchUrl(String.Format("{0} S{1:00}E{2:00} category:tv", seriesTitle.Replace('+', ' '), seasonNumber, episodeNumber), 0);
             }
         }
 
