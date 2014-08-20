@@ -14,6 +14,7 @@ namespace NzbDrone.Common.Http
         string DownloadString(string url);
         string DownloadString(string url, string username, string password);
         string DownloadString(string url, ICredentials credentials);
+        string DownloadXml(string url);
         Dictionary<string, string> GetHeader(string url);
         Stream DownloadStream(string url, NetworkCredential credential = null);
         void DownloadFile(string url, string fileName);
@@ -89,6 +90,34 @@ namespace NzbDrone.Common.Http
             }
 
             return headers;
+        }
+
+        public string DownloadXml(string url)
+        {
+            try
+            {
+                var client = new GZipWebClient();
+                client.Headers.Add(HttpRequestHeader.UserAgent, _userAgent);
+
+                var result = client.DownloadString(url);
+
+                if (client.ResponseHeaders[HttpResponseHeader.ContentType] == "text/html")
+                {
+                    throw new WebException("Unexpected ContentType. Site is likely blocked or unavailable.");
+                }
+
+                return result;
+            }
+            catch (WebException e)
+            {
+                _logger.Warn("Failed to get response from: {0} {1}", url, e.Message);
+                throw;
+            }
+            catch (Exception e)
+            {
+                _logger.WarnException("Failed to get response from: " + url, e);
+                throw;
+            }
         }
 
         public Stream DownloadStream(string url, NetworkCredential credential = null)

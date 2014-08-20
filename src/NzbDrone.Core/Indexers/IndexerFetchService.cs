@@ -140,7 +140,7 @@ namespace NzbDrone.Core.Indexers
                 try
                 {
                     _logger.Debug("Downloading Feed " + url);
-                    var xml = _httpProvider.DownloadString(url);
+                    var xml = _httpProvider.DownloadXml(url);
                     if (!string.IsNullOrWhiteSpace(xml))
                     {
                         result.AddRange(indexer.Parser.Process(xml, url));
