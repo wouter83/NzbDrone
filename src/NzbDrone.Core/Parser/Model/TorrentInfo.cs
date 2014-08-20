@@ -8,5 +8,19 @@ namespace NzbDrone.Core.Parser.Model
         public string InfoHash { get; set; }
         public Int32? Seeds { get; set; }
         public Int32? Peers { get; set; }
+
+        public static Int32? GetSeeders(ReleaseInfo release)
+        {
+            var torrentInfo = release as TorrentInfo;
+
+            if (torrentInfo == null)
+            {
+                return null;
+            }
+            else
+            {
+                return torrentInfo.Seeds;
+            }
+        }
     }
 }
