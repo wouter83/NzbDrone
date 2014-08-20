@@ -1,6 +1,7 @@
 using System;
 using System.Globalization;
 using System.Linq;
+using System.Text.RegularExpressions;
 using System.Xml.Linq;
 using NzbDrone.Core.Parser.Model;
 
@@ -8,6 +9,9 @@ namespace NzbDrone.Core.Indexers.IPTorrents
 {
     public class IPTorrentsRssParser : BasicTorrentRssParser
     {
+        readonly Regex _sizeRegex = new Regex(@"(?<size>\d+(?:\.\d+)? [KMG]i?B)", RegexOptions.Compiled);
+
+
         protected override XElement GetTorrentElement(XElement item)
         {
             return item;
@@ -16,29 +20,10 @@ namespace NzbDrone.Core.Indexers.IPTorrents
         protected override Int64 GetSize(XElement torrentElement)
         {
             var description = torrentElement.Element("description").Value;
-            var sizeString = description.Substring(description.LastIndexOf("Size:") + 5).Trim();
+            var matches = _sizeRegex.Match(description);
+            var sizeString = matches.Groups["size"].Value;
 
-            Double sizeValue = Double.Parse(sizeString.Split(' ').First(), CultureInfo.InvariantCulture);
-            Int64 fileSize = 0;
-
-            if (sizeString.IndexOf("GB") != -1)
-            {
-                fileSize = Convert.ToInt64(sizeValue * 1073741824);
-            }
-            else if (sizeString.IndexOf("MB") != -1)
-            {
-                fileSize = Convert.ToInt64(sizeValue * 1048576);
-            }
-            else if (sizeString.IndexOf("KB") != -1) // KB ??? need to find examples
-            {
-                fileSize = Convert.ToInt64(sizeValue * 1024);
-            }
-            else // bytes? ??? need to find examples
-            {
-                fileSize = Convert.ToInt64(sizeValue);
-            }
-
-            return fileSize;
+            return ParseSize(sizeString, true);
         }
     }
 }
