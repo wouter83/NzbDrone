@@ -134,11 +134,6 @@ namespace NzbDrone.Core.Download.Clients.Transmission
         {
             var request = new RestRequest();
             request.RequestFormat = DataFormat.Json;
-            
-            if (!settings.Username.IsNullOrWhiteSpace())
-            {
-                request.Credentials = new NetworkCredential(settings.Username, settings.Password);
-            }
 
             _logger.Debug("Url: {0} GetSessionId", client.BuildUri(request));
             var restResponse = client.Execute(request);
@@ -177,11 +172,6 @@ namespace NzbDrone.Core.Download.Clients.Transmission
             var request = new RestRequest(Method.POST);
             request.RequestFormat = DataFormat.Json;
             request.AddHeader("X-Transmission-Session-Id", _sessionId);
-
-            if (!settings.Username.IsNullOrWhiteSpace())
-            {
-                request.Credentials = new NetworkCredential(settings.Username, settings.Password);
-            }
 
             var data = new Dictionary<String, Object>();
             data.Add("method", action);
@@ -228,7 +218,14 @@ namespace NzbDrone.Core.Download.Clients.Transmission
                                  settings.Host,
                                  settings.Port);
 
-            return RestClientFactory.BuildClient(url);
+            var restClient = RestClientFactory.BuildClient(url);
+
+            if (!settings.Username.IsNullOrWhiteSpace())
+            {
+                restClient.Authenticator = new HttpBasicAuthenticator(settings.Username, settings.Password);
+            }
+
+            return restClient;
         }
     }
 }
