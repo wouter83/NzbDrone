@@ -38,7 +38,7 @@ namespace NzbDrone.Core.Test.IndexerTests.BitMeTvTests
         public void Indexer_TestFeedParser_BitMeTv()
         {
             var httpProviderMock = Mocker.GetMock<IHttpProvider>();
-            httpProviderMock.Setup(o => o.DownloadString(It.IsAny<String>()))
+            httpProviderMock.Setup(o => o.DownloadXml(It.IsAny<String>()))
                             .Returns(_recentFeed);
 
             var httpProvider = httpProviderMock.Object;

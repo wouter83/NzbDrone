@@ -39,7 +39,7 @@ namespace NzbDrone.Core.Test.IndexerTests.KickassTorrentsTests
         public void Indexer_TestFeedParser_KickassTorrents()
         {
             var httpProviderMock = Mocker.GetMock<IHttpProvider>();
-            httpProviderMock.Setup(o => o.DownloadString(It.IsAny<String>()))
+            httpProviderMock.Setup(o => o.DownloadXml(It.IsAny<String>()))
                             .Returns(_recentFeed);
 
             var httpProvider = httpProviderMock.Object;
